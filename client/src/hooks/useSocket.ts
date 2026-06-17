@@ -45,6 +45,7 @@ export function useSocket() {
     };
 
     const onYourRole = ({ role, topic, hints }: YourRolePayload) => {
+      store.clearRoleState();
       store.setMyRole(role, topic, hints);
     };
 
