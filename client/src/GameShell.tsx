@@ -5,6 +5,7 @@ import { useReconnect } from './hooks/useReconnect';
 import { useGameStore } from './store/gameStore';
 import { socket } from './socket';
 import { RoomCodeBadge } from './components/RoomCodeBadge';
+import { ToastContainer } from './components/ToastContainer';
 import { LobbyPage } from './pages/LobbyPage';
 import { RoleRevealPage } from './pages/RoleRevealPage';
 import { RoundPage } from './pages/RoundPage';
@@ -36,6 +37,7 @@ export function GameShell() {
   return (
     <>
       <RoomCodeBadge />
+      <ToastContainer />
       {phase === 'lobby' && <LobbyPage />}
       {phase === 'role_reveal' && <RoleRevealPage />}
       {phase === 'round' && <RoundPage />}

@@ -160,6 +160,30 @@ export function registerHandlers(io: Server, socket: Socket): void {
     broadcastState(io, room);
   });
 
+  // ── Kick Player ───────────────────────────────────────────────────────────
+  socket.on('kick_player', ({ playerId }: { playerId: string }) => {
+    const room = getRoom(socket.data.roomCode);
+    if (!room || room.phase !== 'lobby') return;
+    const requester = room.players.find((p) => p.id === socket.data.playerId);
+    if (!requester?.isHost) return;
+    if (playerId === requester.id) return; // can't kick yourself
+
+    const target = room.players.find((p) => p.id === playerId);
+    if (!target) return;
+
+    // Notify and disconnect the kicked socket
+    const targetSocket = io.sockets.sockets.get(target.socketId);
+    if (targetSocket) {
+      targetSocket.emit('kicked', {});
+      targetSocket.leave(room.roomCode);
+    }
+
+    // Remove from room
+    room.players = room.players.filter((p) => p.id !== playerId);
+    io.to(room.roomCode).emit('player_left', { playerId });
+    broadcastState(io, room);
+  });
+
   // ── Update Settings ───────────────────────────────────────────────────────
   socket.on('update_settings', (payload: UpdateSettingsPayload) => {
     const room = getRoom(socket.data.roomCode);

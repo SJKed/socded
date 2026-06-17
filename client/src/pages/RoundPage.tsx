@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { socket } from '../socket';
+import { haptics } from '../utils/haptics';
 
 export function RoundPage() {
   const players = useGameStore((s) => s.players);
@@ -17,17 +18,26 @@ export function RoundPage() {
 
   const [speakerSecondsLeft, setSpeakerSecondsLeft] = useState(settings.clueTimeSeconds);
   const [roundSecondsLeft, setRoundSecondsLeft] = useState(settings.timerSeconds);
+  const prevSpeakerSeconds = useRef(settings.clueTimeSeconds);
 
   const isMyTurn = currentSpeakerId === myPlayerId;
   const currentSpeaker = players.find((p) => p.id === currentSpeakerId);
 
   useEffect(() => {
     if (!speakerEndsAt) return;
-    const tick = () => setSpeakerSecondsLeft(Math.max(0, Math.round((speakerEndsAt - Date.now()) / 1000)));
+    const tick = () => {
+      const left = Math.max(0, Math.round((speakerEndsAt - Date.now()) / 1000));
+      setSpeakerSecondsLeft(left);
+      // Haptic tick for the last 3 seconds on your own turn
+      if (isMyTurn && left <= 3 && left > 0 && left !== prevSpeakerSeconds.current) {
+        haptics.tick();
+      }
+      prevSpeakerSeconds.current = left;
+    };
     tick();
     const id = setInterval(tick, 500);
     return () => clearInterval(id);
-  }, [speakerEndsAt]);
+  }, [speakerEndsAt, isMyTurn]);
 
   useEffect(() => {
     if (!timerEndsAt || timerEndsAt > 9_000_000_000_000) return;
