@@ -21,6 +21,10 @@ export function buildOutsiderRotation(players: Player[]): string[] {
   return shuffle(players.map((p) => p.id));
 }
 
+export function buildSpeakerOrder(players: Player[]): string[] {
+  return shuffle(players.filter((p) => p.isConnected).map((p) => p.id));
+}
+
 export function startRound(room: GameRoom): void {
   room.currentRound += 1;
 
@@ -40,6 +44,9 @@ export function startRound(room: GameRoom): void {
   room.revealedCount = 0;
   room.outsiderGuess = null;
   room.outsiderGuessCorrect = null;
+  room.speakerOrder = [];
+  room.currentSpeakerIndex = 0;
+  room.speakerTimerEndsAt = null;
   room.timerEndsAt = null;
   room.voteDeadlineAt = null;
 
@@ -150,6 +157,7 @@ export function toPublicPlayer(p: Player): PublicPlayer {
 
 export function buildClientState(room: GameRoom): ClientGameState {
   const connectedVoters = room.players.filter((p) => p.isConnected);
+  const currentSpeakerId = room.speakerOrder[room.currentSpeakerIndex] ?? null;
   return {
     roomCode: room.roomCode,
     phase: room.phase,
@@ -159,6 +167,10 @@ export function buildClientState(room: GameRoom): ClientGameState {
     currentRound: room.currentRound,
     totalRounds: room.settings.roundCount,
     timerEndsAt: room.timerEndsAt,
+    speakerEndsAt: room.speakerTimerEndsAt,
+    currentSpeakerId,
+    speakerIndex: room.currentSpeakerIndex,
+    totalSpeakers: room.speakerOrder.length,
     voteDeadlineAt: room.voteDeadlineAt,
     votesIn: room.players.filter((p) => p.hasVoted).length,
     totalVoters: connectedVoters.length,
@@ -204,6 +216,9 @@ export function resetForPlayAgain(room: GameRoom): void {
   room.outsiderGuess = null;
   room.outsiderGuessCorrect = null;
   room.lastVoteBreakdown = {};
+  room.speakerOrder = [];
+  room.currentSpeakerIndex = 0;
+  room.speakerTimerEndsAt = null;
   room.roundSummaries = [];
   for (const p of room.players) {
     p.score = 0;

@@ -4,3 +4,7 @@ dist/
 .env.local
 *.log
 .DS_Store
+# ts-node-dev emits compiled JS alongside TS sources
+shared/types.js
+client/src/**/*.js
+server/src/**/*.js

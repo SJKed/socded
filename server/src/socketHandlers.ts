@@ -9,6 +9,7 @@ import {
 import {
   buildClientState,
   startRound,
+  buildSpeakerOrder,
   resolveVotes,
   calculateScoreDelta,
   applyScoreDelta,
@@ -25,6 +26,8 @@ import {
   stopTimer,
   startVoteTimer,
   stopVoteTimer,
+  startSpeakerTimer,
+  stopSpeakerTimer,
 } from './timerService';
 import {
   CreateRoomPayload,
@@ -218,12 +221,13 @@ export function registerHandlers(io: Server, socket: Socket): void {
           p.vote = null;
         }
 
+        // Start main round timer (hard cap — outsider wins if it expires)
         startRoundTimer(io, r, () => {
           const rr = getRoom(r.roomCode);
           if (!rr || rr.phase !== 'round') return;
+          stopSpeakerTimer(rr);
           rr.phase = 'round_summary';
 
-          // Timer expired — outsider wins
           const delta = calculateScoreDelta(rr, false, null);
           applyScoreDelta(rr, delta);
           const summary = buildRoundSummary(rr, false, {}, delta);
@@ -234,9 +238,23 @@ export function registerHandlers(io: Server, socket: Socket): void {
           io.to(rr.roomCode).emit('round_summary_shown', { summary, scores: getScores(rr) });
         });
 
+        // Start speaker rotation
+        advanceSpeaker(io, r);
+
         broadcastState(io, r);
       }, 2000);
     }
+  });
+
+  // ── End My Turn ───────────────────────────────────────────────────────────
+  socket.on('end_my_turn', () => {
+    const room = getRoom(socket.data.roomCode);
+    if (!room || room.phase !== 'round') return;
+    if (room.speakerOrder[room.currentSpeakerIndex] !== socket.data.playerId) return;
+
+    stopSpeakerTimer(room);
+    advanceSpeaker(io, room);
+    broadcastState(io, room);
   });
 
   // ── Call Vote ─────────────────────────────────────────────────────────────
@@ -248,6 +266,7 @@ export function registerHandlers(io: Server, socket: Socket): void {
     if (!player) return;
 
     stopTimer(room);
+    stopSpeakerTimer(room);
     room.phase = 'voting';
 
     for (const p of room.players) {
@@ -399,6 +418,38 @@ export function registerHandlers(io: Server, socket: Socket): void {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
+
+function advanceSpeaker(io: Server, room: GameRoom): void {
+  if (room.phase !== 'round') return;
+
+  // Build a fresh rotation when starting or when a full lap is done
+  if (
+    room.speakerOrder.length === 0 ||
+    room.currentSpeakerIndex >= room.speakerOrder.length
+  ) {
+    room.speakerOrder = buildSpeakerOrder(room.players);
+    room.currentSpeakerIndex = 0;
+  }
+
+  const speakerId = room.speakerOrder[room.currentSpeakerIndex];
+  const speaker = room.players.find((p) => p.id === speakerId);
+
+  io.to(room.roomCode).emit('speaker_changed', {
+    speakerId,
+    speakerName: speaker?.name ?? '',
+    speakerIndex: room.currentSpeakerIndex,
+    totalSpeakers: room.speakerOrder.length,
+    endsAt: Date.now() + room.settings.clueTimeSeconds * 1000,
+  });
+
+  startSpeakerTimer(io, room, room.settings.clueTimeSeconds, () => {
+    const r = getRoom(room.roomCode);
+    if (!r || r.phase !== 'round') return;
+    r.currentSpeakerIndex += 1;
+    advanceSpeaker(io, r);
+    broadcastState(io, r);
+  });
+}
 
 function resolveAndBroadcastVote(io: Server, room: GameRoom): void {
   const { mostVotedId, isTie, caughtOutsider, voteBreakdown } = resolveVotes(room);

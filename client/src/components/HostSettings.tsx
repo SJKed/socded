@@ -37,13 +37,42 @@ export function HostSettings() {
       </div>
 
       <div>
-        <p className="label">Round Timer</p>
+        <p className="label">Time Per Clue</p>
         <div style={{ display: 'flex', gap: 8 }}>
           {[
-            { label: '1 min', value: 60 },
-            { label: '90 sec', value: 90 },
+            { label: '10s', value: 10 },
+            { label: '20s', value: 20 },
+            { label: '30s', value: 30 },
+            { label: '45s', value: 45 },
+          ].map(({ label, value }) => (
+            <button
+              key={value}
+              onClick={() => update({ clueTimeSeconds: value })}
+              style={{
+                flex: 1,
+                minHeight: 48,
+                background: settings.clueTimeSeconds === value ? 'var(--accent)' : 'var(--bg-raised)',
+                color: 'var(--text)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.95rem',
+                fontWeight: 700,
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="label">Max Round Time</p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[
             { label: '3 min', value: 180 },
             { label: '5 min', value: 300 },
+            { label: '8 min', value: 480 },
+            { label: '∞', value: 9999 },
           ].map(({ label, value }) => (
             <button
               key={value}

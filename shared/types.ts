@@ -11,6 +11,7 @@ export type Phase =
 export interface Settings {
   roundCount: number;
   timerSeconds: number;
+  clueTimeSeconds: number;
   topicPack: string;
   easyMode: boolean;
 }
@@ -61,6 +62,10 @@ export interface GameRoom {
   currentTopic: string;
   easyModeHints: string[];
   revealedCount: number;
+  speakerOrder: string[];
+  currentSpeakerIndex: number;
+  speakerTimerEndsAt: number | null;
+  speakerTimerIntervalId: ReturnType<typeof setInterval> | null;
   timerEndsAt: number | null;
   timerIntervalId: ReturnType<typeof setInterval> | null;
   voteDeadlineAt: number | null;
@@ -81,6 +86,10 @@ export interface ClientGameState {
   currentRound: number;
   totalRounds: number;
   timerEndsAt: number | null;
+  speakerEndsAt: number | null;
+  currentSpeakerId: string | null;
+  speakerIndex: number;
+  totalSpeakers: number;
   voteDeadlineAt: number | null;
   votesIn: number;
   totalVoters: number;

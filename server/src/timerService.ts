@@ -49,3 +49,30 @@ export function stopVoteTimer(room: GameRoom): void {
   }
   room.voteDeadlineAt = null;
 }
+
+export function startSpeakerTimer(
+  io: Server,
+  room: GameRoom,
+  seconds: number,
+  onExpire: () => void
+): void {
+  stopSpeakerTimer(room);
+  room.speakerTimerEndsAt = Date.now() + seconds * 1000;
+  room.speakerTimerIntervalId = setInterval(() => {
+    if (room.speakerTimerEndsAt === null) return;
+    const secondsLeft = Math.max(0, Math.round((room.speakerTimerEndsAt - Date.now()) / 1000));
+    io.to(room.roomCode).emit('speaker_tick', { secondsLeft });
+    if (secondsLeft <= 0) {
+      stopSpeakerTimer(room);
+      onExpire();
+    }
+  }, 1000);
+}
+
+export function stopSpeakerTimer(room: GameRoom): void {
+  if (room.speakerTimerIntervalId !== null) {
+    clearInterval(room.speakerTimerIntervalId);
+    room.speakerTimerIntervalId = null;
+  }
+  room.speakerTimerEndsAt = null;
+}
