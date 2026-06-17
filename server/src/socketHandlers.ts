@@ -277,6 +277,7 @@ export function registerHandlers(io: Server, socket: Socket): void {
     if (room.speakerOrder[room.currentSpeakerIndex] !== socket.data.playerId) return;
 
     stopSpeakerTimer(room);
+    room.currentSpeakerIndex += 1;
     advanceSpeaker(io, room);
     broadcastState(io, room);
   });
