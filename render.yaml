@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: outsider-game
+    runtime: node
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
